@@ -7,8 +7,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
-	"github.com/InsideGallery/core/queue/nats/client"
+	"github.com/FrogoAI/mq-balancer/subscriber/driver/client"
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 )
 
 type NATSMsg struct {

@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/InsideGallery/core/multiproc/worker"
+	"github.com/FrogoAI/mq-balancer/subscriber"
+	"github.com/FrogoAI/mq-balancer/subscriber/driver/client"
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 
-	"github.com/InsideGallery/core/queue/generic/subscriber"
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
-	"github.com/InsideGallery/core/queue/nats/client"
-	"github.com/InsideGallery/core/testutils"
+	"github.com/FrogoAI/multiproc/worker"
+	"github.com/FrogoAI/testutils"
 )
 
 func TestPublisher(t *testing.T) {

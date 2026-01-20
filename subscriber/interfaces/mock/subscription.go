@@ -13,7 +13,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	interfaces "github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
+	interfaces "github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 	gomock "go.uber.org/mock/gomock"
 )
 

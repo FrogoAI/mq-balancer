@@ -6,9 +6,10 @@ import (
 	"runtime"
 	"time"
 
-	memory "github.com/InsideGallery/core/memory/utils"
-	"github.com/InsideGallery/core/multiproc/worker"
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
+	memory "github.com/FrogoAI/memory/utils"
+	"github.com/FrogoAI/multiproc/worker"
+
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 )
 
 func GetConcurrentSize(cfg interfaces.Config) int {

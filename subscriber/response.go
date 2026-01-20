@@ -3,8 +3,8 @@ package subscriber
 import (
 	"context"
 
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
-	"github.com/InsideGallery/core/queue/nats/client"
+	"github.com/FrogoAI/mq-balancer/subscriber/driver/client"
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 )
 
 const (

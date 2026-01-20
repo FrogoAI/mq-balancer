@@ -12,7 +12,7 @@ package mock
 import (
 	reflect "reflect"
 
-	interfaces "github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
+	interfaces "github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 	gomock "go.uber.org/mock/gomock"
 )
 

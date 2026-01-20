@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 )
 
 const (

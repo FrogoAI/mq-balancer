@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/InsideGallery/core/multiproc/worker"
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
+	"github.com/FrogoAI/multiproc/worker"
+
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 )
 
 const (

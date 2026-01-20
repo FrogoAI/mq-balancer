@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
-	"github.com/InsideGallery/core/queue/generic/subscriber/interfaces/mock"
-	"github.com/InsideGallery/core/testutils"
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
+	"github.com/FrogoAI/mq-balancer/subscriber/interfaces/mock"
 
+	"github.com/FrogoAI/testutils"
 	"go.uber.org/mock/gomock"
 )
 

@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	interfaces "github.com/InsideGallery/core/queue/generic/subscriber/interfaces"
+	interfaces "github.com/FrogoAI/mq-balancer/subscriber/interfaces"
 	metric "go.opentelemetry.io/otel/metric"
 	gomock "go.uber.org/mock/gomock"
 )
