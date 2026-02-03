@@ -8,7 +8,7 @@ require (
 	github.com/FrogoAI/testutils v0.0.0-20260120141156-9cd2d6874ef4
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/nats-io/nats.go v1.48.0
-	github.com/nats-io/nkeys v0.4.12
+	github.com/nats-io/nkeys v0.4.15
 	go.opentelemetry.io/otel v1.39.0
 	go.opentelemetry.io/otel/metric v1.39.0
 	go.uber.org/mock v0.6.0
@@ -24,7 +24,7 @@ require (
 	github.com/sirbu/golang-common v0.0.0-20170403140351-21d4febd4bca // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	go.mongodb.org/mongo-driver v1.17.6 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 )
