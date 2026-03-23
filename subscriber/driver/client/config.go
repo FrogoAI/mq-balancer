@@ -25,15 +25,15 @@ type Config struct {
 	Password             string        `env:"_PASSWORD" envDefault:""`
 	Seed                 string        `env:"_SEED" envDefault:""`
 	DrainTimeout         time.Duration `env:"_DRAIN_TIMEOUT" envDefault:"1s"`
-	MaxReconnects        int           `env:"_MAX_RECONNECTS" envDefault:"10"`
+	MaxReconnects        int           `env:"_MAX_RECONNECTS" envDefault:"-1"`
 	ReconnectWait        time.Duration `env:"_RECONNECT_WAIT" envDefault:"1s"`
 	MaxAckPending        int           `env:"_MAX_ACK_PENDING" envDefault:"0"`
 	RetryOnFailedConnect bool          `env:"_RETRY_ON_FAILED_CONNECT" envDefault:"true"`
 	ManualAck            bool          `env:"_MANUAL_ACK" envDefault:"false"`
-	ConcurrentSize       int           `env:"_CONCURRENT_SIZE" envDefault:"10"`
-	MaxConcurrentSize    uint64        `env:"_MAX_CONCURRENT_SIZE" envDefault:"1024"`
-	ReadTimeout          time.Duration `env:"_READ_TIMEOUT" envDefault:"500ms"`
-	IdleTimeout          time.Duration `env:"_IDLE_TIMEOUT" envDefault:"5s"`
+	ConcurrentSize       int           `env:"_CONCURRENT_SIZE" envDefault:"20"`
+	MaxConcurrentSize    uint64        `env:"_MAX_CONCURRENT_SIZE" envDefault:"100"`
+	ReadTimeout          time.Duration `env:"_READ_TIMEOUT" envDefault:"30s"`
+	IdleTimeout          time.Duration `env:"_IDLE_TIMEOUT" envDefault:"10s"`
 }
 
 func GetNATSConnectionConfigFromEnv(prefixes ...string) (*Config, error) {

@@ -2,6 +2,7 @@ package subscriber
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/FrogoAI/multiproc/worker"
@@ -71,6 +72,16 @@ func (s *Subscription) Process(
 			default:
 				msg, err := s.Subscription.NextMsg(timeout) // Read with timeout
 				if err != nil {
+					if errors.Is(err, ErrConnectionClosed) {
+						s.Client.Logger().Debug("Connection closed",
+							"err", err,
+							"subject", s.subject,
+							"queue", s.queue,
+						)
+
+						break
+					}
+
 					s.Client.Logger().Debug("Error getting next message with timeout",
 						"err", err,
 						"subject", s.subject,
@@ -95,10 +106,10 @@ func (s *Subscription) Process(
 				return
 			case <-t.C:
 				if len(ch) > 0 && s.wpool.Size() < s.Config().GetMaxConcurrentSize() {
-					s.Client.Logger().Info("Increase pool size", "pending", len(ch), "wpool", s.wpool.Size())
+					s.Client.Logger().Debug("Increase pool size", "pending", len(ch), "wpool", s.wpool.Size())
 					s.wpool.Execute(func(ctx context.Context) error {
 						return s.wpool.TemporalWorker(ctx, idleTimeout, func() {
-							s.Client.Logger().Info("Decrease pool size", "wpool", s.wpool.Size()-1)
+							s.Client.Logger().Debug("Decrease pool size", "wpool", s.wpool.Size()-1)
 						}, ch, handler)
 					})
 				}
