@@ -1,5 +1,5 @@
 //go:generate mockgen -package mock -source=logger.go -destination=mock/logger.go
-package interfaces
+package mq
 
 type Logger interface {
 	Error(msg string, args ...any)

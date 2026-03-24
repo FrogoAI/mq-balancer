@@ -25,12 +25,16 @@ func NewClient(
 	cfg *Config,
 	logger Logger,
 ) (*Client, error) {
+	if err := conn.Flush(); err != nil {
+		return nil, fmt.Errorf("flush connection: %w", err)
+	}
+
 	return &Client{
 		conn:   conn,
 		ctx:    ctx,
 		cfg:    cfg,
 		logger: logger,
-	}, conn.Flush()
+	}, nil
 }
 
 func (c *Client) WithMeter(m metric.Meter) {
@@ -76,14 +80,19 @@ func (c *Client) Config() *Config {
 }
 
 func Default(ctx context.Context, logger Logger, prefixes ...string) (*Client, error) {
-	config, err := GetNATSConnectionConfigFromEnv(prefixes...)
+	config, err := NATSConfigFromEnv(prefixes...)
 	if err != nil {
-		return nil, fmt.Errorf("error getting queue config: %w", err)
+		return nil, fmt.Errorf("get queue config: %w", err)
 	}
 
-	ncc, err := nats.Connect(config.Addr, config.GetOptions()...)
+	options, err := config.Options()
 	if err != nil {
-		return nil, fmt.Errorf("queue connect err: %w", err)
+		return nil, fmt.Errorf("build nats options: %w", err)
+	}
+
+	ncc, err := nats.Connect(config.Addr, options...)
+	if err != nil {
+		return nil, fmt.Errorf("queue connect: %w", err)
 	}
 
 	return NewClient(ctx, ncc, config, logger)

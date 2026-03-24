@@ -40,44 +40,44 @@ func (m *MockConfig) EXPECT() *MockConfigMockRecorder {
 	return m.recorder
 }
 
-// GetConcurrentSize mocks base method.
-func (m *MockConfig) GetConcurrentSize() int {
+// ConcurrentSize mocks base method.
+func (m *MockConfig) ConcurrentSize() int {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConcurrentSize")
+	ret := m.ctrl.Call(m, "ConcurrentSize")
 	ret0, _ := ret[0].(int)
 	return ret0
 }
 
-// GetConcurrentSize indicates an expected call of GetConcurrentSize.
-func (mr *MockConfigMockRecorder) GetConcurrentSize() *gomock.Call {
+// ConcurrentSize indicates an expected call of ConcurrentSize.
+func (mr *MockConfigMockRecorder) ConcurrentSize() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConcurrentSize", reflect.TypeOf((*MockConfig)(nil).GetConcurrentSize))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConcurrentSize", reflect.TypeOf((*MockConfig)(nil).ConcurrentSize))
 }
 
-// GetMaxConcurrentSize mocks base method.
-func (m *MockConfig) GetMaxConcurrentSize() uint64 {
+// MaxConcurrentSize mocks base method.
+func (m *MockConfig) MaxConcurrentSize() uint64 {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMaxConcurrentSize")
+	ret := m.ctrl.Call(m, "MaxConcurrentSize")
 	ret0, _ := ret[0].(uint64)
 	return ret0
 }
 
-// GetMaxConcurrentSize indicates an expected call of GetMaxConcurrentSize.
-func (mr *MockConfigMockRecorder) GetMaxConcurrentSize() *gomock.Call {
+// MaxConcurrentSize indicates an expected call of MaxConcurrentSize.
+func (mr *MockConfigMockRecorder) MaxConcurrentSize() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxConcurrentSize", reflect.TypeOf((*MockConfig)(nil).GetMaxConcurrentSize))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MaxConcurrentSize", reflect.TypeOf((*MockConfig)(nil).MaxConcurrentSize))
 }
 
-// GetReadTimeout mocks base method.
-func (m *MockConfig) GetReadTimeout() time.Duration {
+// ReadTimeout mocks base method.
+func (m *MockConfig) ReadTimeout() time.Duration {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetReadTimeout")
+	ret := m.ctrl.Call(m, "ReadTimeout")
 	ret0, _ := ret[0].(time.Duration)
 	return ret0
 }
 
-// GetReadTimeout indicates an expected call of GetReadTimeout.
-func (mr *MockConfigMockRecorder) GetReadTimeout() *gomock.Call {
+// ReadTimeout indicates an expected call of ReadTimeout.
+func (mr *MockConfigMockRecorder) ReadTimeout() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReadTimeout", reflect.TypeOf((*MockConfig)(nil).GetReadTimeout))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadTimeout", reflect.TypeOf((*MockConfig)(nil).ReadTimeout))
 }

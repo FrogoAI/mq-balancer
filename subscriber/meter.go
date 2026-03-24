@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
+	"github.com/FrogoAI/mq-balancer/subscriber/mq"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 
 	Bytes string = "By"
 
-	Subject = attribute.Key("subject")
+	SubjectKey = attribute.Key("subject")
 )
 
 type SubscriptionDetails struct {
@@ -27,7 +27,7 @@ type SubscriptionDetails struct {
 	Delivered    int64
 }
 
-func getSubscriptionMetrics(sub interfaces.Subscription) (*SubscriptionDetails, error) {
+func getSubscriptionMetrics(sub mq.Subscription) (*SubscriptionDetails, error) {
 	pMsg, pBytes, err := sub.Pending()
 	if err != nil {
 		return nil, err
@@ -52,19 +52,19 @@ func getSubscriptionMetrics(sub interfaces.Subscription) (*SubscriptionDetails, 
 }
 
 func (s *Subscription) setupMetrics() error {
-	m := s.Meter()
-	if m == nil {
+	meter := s.Meter()
+	if meter == nil {
 		return nil
 	}
 
-	_, err := m.Int64ObservableGauge(SubscriptionsPendingCount,
+	_, err := meter.Int64ObservableGauge(SubscriptionsPendingCount,
 		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
-			m, err := getSubscriptionMetrics(s.Subscription)
+			details, err := getSubscriptionMetrics(s.sub)
 			if err != nil {
 				return err
 			}
 
-			observer.Observe(m.Pending, metric.WithAttributes(Subject.String(s.Subscription.GetSubject())))
+			observer.Observe(details.Pending, metric.WithAttributes(SubjectKey.String(s.sub.Subject())))
 
 			return nil
 		}))
@@ -72,14 +72,14 @@ func (s *Subscription) setupMetrics() error {
 		return err
 	}
 
-	_, err = m.Int64ObservableGauge(SubscriptionsPendingBytes, metric.WithUnit(Bytes),
+	_, err = meter.Int64ObservableGauge(SubscriptionsPendingBytes, metric.WithUnit(Bytes),
 		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
-			m, err := getSubscriptionMetrics(s.Subscription)
+			details, err := getSubscriptionMetrics(s.sub)
 			if err != nil {
 				return err
 			}
 
-			observer.Observe(m.PendingBytes, metric.WithAttributes(Subject.String(s.Subscription.GetSubject())))
+			observer.Observe(details.PendingBytes, metric.WithAttributes(SubjectKey.String(s.sub.Subject())))
 
 			return nil
 		}))
@@ -87,14 +87,14 @@ func (s *Subscription) setupMetrics() error {
 		return err
 	}
 
-	_, err = m.Int64ObservableGauge(SubscriptionsDroppedMsgs,
+	_, err = meter.Int64ObservableGauge(SubscriptionsDroppedMsgs,
 		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
-			m, err := getSubscriptionMetrics(s.Subscription)
+			details, err := getSubscriptionMetrics(s.sub)
 			if err != nil {
 				return err
 			}
 
-			observer.Observe(m.Dropped, metric.WithAttributes(Subject.String(s.Subscription.GetSubject())))
+			observer.Observe(details.Dropped, metric.WithAttributes(SubjectKey.String(s.sub.Subject())))
 
 			return nil
 		}))
@@ -102,14 +102,14 @@ func (s *Subscription) setupMetrics() error {
 		return err
 	}
 
-	_, err = m.Int64ObservableGauge(SubscriptionCountMsgs,
+	_, err = meter.Int64ObservableGauge(SubscriptionCountMsgs,
 		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
-			m, err := getSubscriptionMetrics(s.Subscription)
+			details, err := getSubscriptionMetrics(s.sub)
 			if err != nil {
 				return err
 			}
 
-			observer.Observe(m.Delivered, metric.WithAttributes(Subject.String(s.Subscription.GetSubject())))
+			observer.Observe(details.Delivered, metric.WithAttributes(SubjectKey.String(s.sub.Subject())))
 
 			return nil
 		}))

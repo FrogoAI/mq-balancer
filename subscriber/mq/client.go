@@ -1,5 +1,5 @@
 //go:generate mockgen -package mock -source=client.go -destination=mock/client.go
-package interfaces
+package mq
 
 import "context"
 

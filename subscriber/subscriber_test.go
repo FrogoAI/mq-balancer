@@ -1,63 +1,151 @@
-//go:build integration
-// +build integration
-
 package subscriber
 
 import (
 	"context"
-	"log/slog"
+	"errors"
+	"runtime"
 	"testing"
 	"time"
 
-	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
-	"github.com/FrogoAI/mq-balancer/subscriber/interfaces/mock"
-
+	"github.com/FrogoAI/mq-balancer/subscriber/mq"
+	"github.com/FrogoAI/mq-balancer/subscriber/mq/mock"
 	"github.com/FrogoAI/testutils"
 	"go.uber.org/mock/gomock"
 )
 
-func TestSubscriber(t *testing.T) {
+func TestConcurrentSize(t *testing.T) {
+	cases := []struct {
+		name string
+		size int
+		want int
+	}{
+		{
+			name: "positive value returned as-is",
+			size: 10,
+			want: 10,
+		},
+		{
+			name: "zero falls back to NumCPU",
+			size: 0,
+			want: runtime.NumCPU(),
+		},
+		{
+			name: "negative falls back to NumCPU",
+			size: -1,
+			want: runtime.NumCPU(),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			cfg := mock.NewMockConfig(ctrl)
+			cfg.EXPECT().ConcurrentSize().Return(tc.size)
+
+			got := ConcurrentSize(cfg)
+			testutils.Equal(t, got, tc.want)
+		})
+	}
+}
+
+func TestNewSubscriber(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	cl := mock.NewMockClient(ctrl)
+	cl.EXPECT().Context().Return(context.Background())
 
-	subject1 := "core_subject_1"
-	ctx := context.Background()
-	clMock := mock.NewMockClient(ctrl)
-	subMock := mock.NewMockSubscription(ctrl)
-	msgMock := mock.NewMockMsg(ctrl)
-	cfgMock := mock.NewMockConfig(ctrl)
+	s := NewSubscriber(cl)
 
-	clMock.EXPECT().Context().Return(ctx)
-	clMock.EXPECT().Config().Return(cfgMock)
-	cfgMock.EXPECT().GetConcurrentSize().Return(1)
-	clMock.EXPECT().Config().Return(cfgMock).AnyTimes()
-	cfgMock.EXPECT().GetReadTimeout().Return(time.Second)
-	clMock.EXPECT().Context().Return(ctx)
-	clMock.EXPECT().Context().Return(ctx)
-	clMock.EXPECT().Meter().Return(nil)
-	clMock.EXPECT().QueueSubscribeSync(gomock.Any(), gomock.Any()).Return(subMock, nil)
-	subMock.EXPECT().NextMsg(gomock.Any()).Return(msgMock, nil).AnyTimes()
-	msgMock.EXPECT().GetData().Return([]byte("test string")).AnyTimes()
-	subMock.EXPECT().Drain().Return(nil)
-	cfgMock.EXPECT().GetMaxConcurrentSize().Return(uint64(1)).AnyTimes()
-	clMock.EXPECT().Close().Return(nil).AnyTimes()
+	testutils.Equal(t, s.Client != nil, true)
+	testutils.Equal(t, s.Pool != nil, true)
+	testutils.Equal(t, s.Subs() != nil, true)
+	testutils.Equal(t, len(s.Subs().GetMap()), 0)
+}
 
-	ch := make(chan struct{})
-	s := NewSubscriber(clMock)
+func TestSubscribeWithParameters_NilHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+	cl.EXPECT().Context().Return(context.Background())
 
-	s.Subscribe(subject1, "test", func(ctx context.Context, msg interfaces.Msg) error {
-		slog.Info("Received message", "data", string(msg.GetData()))
-		time.Sleep(time.Millisecond * 2)
-		ch <- struct{}{}
-		return nil
-	})
+	s := NewSubscriber(cl)
+	s.SubscribeWithParameters(1, time.Second, "subj", "queue", nil)
 
-	<-ch
+	testutils.Equal(t, len(s.Subs().GetMap()), 0)
+}
+
+func TestSubscribeWithParameters_AfterClose(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+	cl.EXPECT().Context().Return(context.Background())
+
+	s := NewSubscriber(cl)
+
 	err := s.Close()
 	testutils.Equal(t, err, nil)
 
-	err = s.Wait()
+	handler := func(_ context.Context, _ mq.Msg) error { return nil }
+	s.SubscribeWithParameters(1, time.Second, "subj", "queue", handler)
+
+	testutils.Equal(t, len(s.Subs().GetMap()), 0)
+}
+
+func TestGet_NotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+	cl.EXPECT().Context().Return(context.Background())
+
+	s := NewSubscriber(cl)
+	sub := s.Get("nonexistent", "queue")
+
+	testutils.Equal(t, sub == nil, true)
+}
+
+func TestSubscribeWithParameters_ZeroBuffer(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+	cfg := mock.NewMockConfig(ctrl)
+	subMock := mock.NewMockSubscription(ctrl)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cl.EXPECT().Context().Return(ctx).AnyTimes()
+	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(subMock, nil)
+	cl.EXPECT().Meter().Return(nil)
+	cl.EXPECT().Config().Return(cfg).AnyTimes()
+	cl.EXPECT().Logger().Return(stubLogger{}).AnyTimes()
+	cfg.EXPECT().MaxConcurrentSize().Return(uint64(10)).AnyTimes()
+	subMock.EXPECT().NextMsg(gomock.Any()).Return(nil, errors.New("timeout")).AnyTimes()
+	subMock.EXPECT().Drain().Return(nil).AnyTimes()
+
+	s := NewSubscriber(cl)
+
+	// buffer=0 should be corrected to 1
+	s.SubscribeWithParameters(0, 50*time.Millisecond, "subj", "q", func(_ context.Context, _ mq.Msg) error {
+		return nil
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	err := s.Close()
 	testutils.Equal(t, err, nil)
 
-	testutils.Equal(t, len(s.GetSubs().GetMap()), 0)
+	s.ForceClose()
+}
+
+func TestSubscribeWithParameters_SubscribeError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+
+	ctx := context.Background()
+	cl.EXPECT().Context().Return(ctx).AnyTimes()
+	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(nil, errors.New("subscribe failed"))
+
+	s := NewSubscriber(cl)
+
+	s.SubscribeWithParameters(1, 50*time.Millisecond, "subj", "q", func(_ context.Context, _ mq.Msg) error {
+		return nil
+	})
+
+	err := s.Wait()
+	testutils.Equal(t, err != nil, true)
 }

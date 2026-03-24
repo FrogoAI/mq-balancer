@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	interfaces "github.com/FrogoAI/mq-balancer/subscriber/interfaces"
+	mq "github.com/FrogoAI/mq-balancer/subscriber/mq"
 	metric "go.opentelemetry.io/otel/metric"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -57,10 +57,10 @@ func (mr *MockClientMockRecorder) Close() *gomock.Call {
 }
 
 // Config mocks base method.
-func (m *MockClient) Config() interfaces.Config {
+func (m *MockClient) Config() mq.Config {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Config")
-	ret0, _ := ret[0].(interfaces.Config)
+	ret0, _ := ret[0].(mq.Config)
 	return ret0
 }
 
@@ -85,10 +85,10 @@ func (mr *MockClientMockRecorder) Context() *gomock.Call {
 }
 
 // Logger mocks base method.
-func (m *MockClient) Logger() interfaces.Logger {
+func (m *MockClient) Logger() mq.Logger {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Logger")
-	ret0, _ := ret[0].(interfaces.Logger)
+	ret0, _ := ret[0].(mq.Logger)
 	return ret0
 }
 
@@ -113,10 +113,10 @@ func (mr *MockClientMockRecorder) Meter() *gomock.Call {
 }
 
 // QueueSubscribeSync mocks base method.
-func (m *MockClient) QueueSubscribeSync(subject, queue string) (interfaces.Subscription, error) {
+func (m *MockClient) QueueSubscribeSync(subject, queue string) (mq.Subscription, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueueSubscribeSync", subject, queue)
-	ret0, _ := ret[0].(interfaces.Subscription)
+	ret0, _ := ret[0].(mq.Subscription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

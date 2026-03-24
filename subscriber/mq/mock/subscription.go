@@ -13,7 +13,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	interfaces "github.com/FrogoAI/mq-balancer/subscriber/interfaces"
+	mq "github.com/FrogoAI/mq-balancer/subscriber/mq"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -85,25 +85,11 @@ func (mr *MockSubscriptionMockRecorder) Dropped() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dropped", reflect.TypeOf((*MockSubscription)(nil).Dropped))
 }
 
-// GetSubject mocks base method.
-func (m *MockSubscription) GetSubject() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSubject")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetSubject indicates an expected call of GetSubject.
-func (mr *MockSubscriptionMockRecorder) GetSubject() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubject", reflect.TypeOf((*MockSubscription)(nil).GetSubject))
-}
-
 // NextMsg mocks base method.
-func (m *MockSubscription) NextMsg(timeout time.Duration) (interfaces.Msg, error) {
+func (m *MockSubscription) NextMsg(timeout time.Duration) (mq.Msg, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NextMsg", timeout)
-	ret0, _ := ret[0].(interfaces.Msg)
+	ret0, _ := ret[0].(mq.Msg)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -128,4 +114,18 @@ func (m *MockSubscription) Pending() (int64, int64, error) {
 func (mr *MockSubscriptionMockRecorder) Pending() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockSubscription)(nil).Pending))
+}
+
+// Subject mocks base method.
+func (m *MockSubscription) Subject() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Subject")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Subject indicates an expected call of Subject.
+func (mr *MockSubscriptionMockRecorder) Subject() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subject", reflect.TypeOf((*MockSubscription)(nil).Subject))
 }

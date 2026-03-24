@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	memory "github.com/FrogoAI/memory/utils"
 	"github.com/FrogoAI/multiproc/worker"
 
-	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
+	"github.com/FrogoAI/mq-balancer/subscriber/mq"
 )
 
-func GetConcurrentSize(cfg interfaces.Config) int {
-	size := cfg.GetConcurrentSize()
+func ConcurrentSize(cfg mq.Config) int {
+	size := cfg.ConcurrentSize()
 	if size <= 0 {
 		return runtime.NumCPU()
 	}
@@ -22,13 +23,14 @@ func GetConcurrentSize(cfg interfaces.Config) int {
 }
 
 type Subscriber struct {
-	interfaces.Client
+	mq.Client
 	*worker.Pool
 
-	subs *memory.SafeMap[string, *Subscription]
+	subs   *memory.SafeMap[string, *Subscription]
+	closed atomic.Bool
 }
 
-func NewSubscriber(c interfaces.Client) *Subscriber {
+func NewSubscriber(c mq.Client) *Subscriber {
 	return &Subscriber{
 		Client: c,
 		Pool:   worker.NewPool(c.Context()),
@@ -36,18 +38,18 @@ func NewSubscriber(c interfaces.Client) *Subscriber {
 	}
 }
 
-func (s *Subscriber) GetSubs() *memory.SafeMap[string, *Subscription] {
+func (s *Subscriber) Subs() *memory.SafeMap[string, *Subscription] {
 	return s.subs
 }
 
-func (s *Subscriber) Subscribe(subject, queue string, handler interfaces.MsgHandler) {
-	s.SubscribeWithParameters(GetConcurrentSize(s.Config()), s.Config().GetReadTimeout(), subject, queue, handler)
+func (s *Subscriber) Subscribe(subject, queue string, handler mq.MsgHandler) {
+	s.SubscribeWithParameters(ConcurrentSize(s.Config()), s.Config().ReadTimeout(), subject, queue, handler)
 }
 
 func (s *Subscriber) SubscribeWithParameters(
-	buffer int, timeout time.Duration, subject, queue string, handler interfaces.MsgHandler,
+	buffer int, timeout time.Duration, subject, queue string, handler mq.MsgHandler,
 ) {
-	if handler == nil {
+	if handler == nil || s.closed.Load() {
 		return
 	}
 
@@ -68,6 +70,8 @@ func (s *Subscriber) SubscribeWithParameters(
 }
 
 func (s *Subscriber) Close() error {
+	s.closed.Store(true)
+
 	var errs []error
 	for key, sub := range s.subs.GetMap() {
 		errs = append(errs, sub.Stop())

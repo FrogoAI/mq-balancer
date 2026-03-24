@@ -7,7 +7,7 @@ import (
 
 	"github.com/FrogoAI/multiproc/worker"
 
-	"github.com/FrogoAI/mq-balancer/subscriber/interfaces"
+	"github.com/FrogoAI/mq-balancer/subscriber/mq"
 )
 
 const (
@@ -18,16 +18,16 @@ const (
 )
 
 type Subscription struct {
-	interfaces.Client
+	mq.Client
 
-	wpool          *worker.WorkersPool[interfaces.Msg]
+	wpool          *worker.WorkersPool[mq.Msg]
 	ctx            context.Context
 	cancel         func()
-	Subscription   interfaces.Subscription
+	sub            mq.Subscription
 	subject, queue string
 }
 
-func NewSubscription(c interfaces.Client, subject, queue string) (*Subscription, error) {
+func NewSubscription(c mq.Client, subject, queue string) (*Subscription, error) {
 	sub, err := c.QueueSubscribeSync(subject, queue)
 	if err != nil {
 		return nil, err
@@ -36,13 +36,13 @@ func NewSubscription(c interfaces.Client, subject, queue string) (*Subscription,
 	ctx, cancel := context.WithCancel(c.Context())
 
 	return &Subscription{
-		ctx:          ctx,
-		cancel:       cancel,
-		Client:       c,
-		Subscription: sub,
-		subject:      subject,
-		queue:        queue,
-		wpool:        worker.NewWorkersPool[interfaces.Msg](c.Context()),
+		ctx:     ctx,
+		cancel:  cancel,
+		Client:  c,
+		sub:     sub,
+		subject: subject,
+		queue:   queue,
+		wpool:   worker.NewWorkersPool[mq.Msg](c.Context()),
 	}, nil
 }
 
@@ -50,14 +50,14 @@ func (s *Subscription) Process(
 	ctx context.Context,
 	buffer int,
 	timeout time.Duration,
-	handler interfaces.MsgHandler,
+	handler mq.MsgHandler,
 ) error {
 	err := s.setupMetrics()
 	if err != nil {
 		return err
 	}
 
-	ch := make(chan interfaces.Msg, maximumBufferSize)
+	ch := make(chan mq.Msg, maximumBufferSize)
 
 	// Read messages
 	go func() {
@@ -70,7 +70,7 @@ func (s *Subscription) Process(
 			case <-s.ctx.Done():
 				return
 			default:
-				msg, err := s.Subscription.NextMsg(timeout) // Read with timeout
+				msg, err := s.sub.NextMsg(timeout)
 				if err != nil {
 					if errors.Is(err, ErrConnectionClosed) {
 						s.Client.Logger().Debug("Connection closed",
@@ -79,7 +79,7 @@ func (s *Subscription) Process(
 							"queue", s.queue,
 						)
 
-						break
+						return
 					}
 
 					s.Client.Logger().Debug("Error getting next message with timeout",
@@ -104,8 +104,10 @@ func (s *Subscription) Process(
 			select {
 			case <-ctx.Done():
 				return
+			case <-s.ctx.Done():
+				return
 			case <-t.C:
-				if len(ch) > 0 && s.wpool.Size() < s.Config().GetMaxConcurrentSize() {
+				if len(ch) > 0 && s.wpool.Size() < s.Config().MaxConcurrentSize() {
 					s.Client.Logger().Debug("Increase pool size", "pending", len(ch), "wpool", s.wpool.Size())
 					s.wpool.Execute(func(ctx context.Context) error {
 						return s.wpool.TemporalWorker(ctx, idleTimeout, func() {
@@ -127,15 +129,16 @@ func (s *Subscription) Process(
 	return s.wpool.Wait()
 }
 
-func (s *Subscription) Stop() error {
-	err := s.Subscription.Drain()
-	if err != nil {
-		return err
-	}
+func (s *Subscription) Sub() mq.Subscription {
+	return s.sub
+}
 
-	s.wpool.Stop()
+func (s *Subscription) Stop() error {
+	err := s.sub.Drain()
 
 	s.cancel()
 
-	return nil
+	s.wpool.Stop()
+
+	return err
 }

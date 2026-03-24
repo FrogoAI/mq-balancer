@@ -12,7 +12,7 @@ package mock
 import (
 	reflect "reflect"
 
-	interfaces "github.com/FrogoAI/mq-balancer/subscriber/interfaces"
+	mq "github.com/FrogoAI/mq-balancer/subscriber/mq"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,10 +41,10 @@ func (m *MockMsg) EXPECT() *MockMsgMockRecorder {
 }
 
 // Copy mocks base method.
-func (m *MockMsg) Copy(subject string) interfaces.Msg {
+func (m *MockMsg) Copy(subject string) mq.Msg {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Copy", subject)
-	ret0, _ := ret[0].(interfaces.Msg)
+	ret0, _ := ret[0].(mq.Msg)
 	return ret0
 }
 
@@ -54,46 +54,32 @@ func (mr *MockMsgMockRecorder) Copy(subject any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Copy", reflect.TypeOf((*MockMsg)(nil).Copy), subject)
 }
 
-// GetData mocks base method.
-func (m *MockMsg) GetData() []byte {
+// Data mocks base method.
+func (m *MockMsg) Data() []byte {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetData")
+	ret := m.ctrl.Call(m, "Data")
 	ret0, _ := ret[0].([]byte)
 	return ret0
 }
 
-// GetData indicates an expected call of GetData.
-func (mr *MockMsgMockRecorder) GetData() *gomock.Call {
+// Data indicates an expected call of Data.
+func (mr *MockMsgMockRecorder) Data() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetData", reflect.TypeOf((*MockMsg)(nil).GetData))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Data", reflect.TypeOf((*MockMsg)(nil).Data))
 }
 
-// GetHeader mocks base method.
-func (m *MockMsg) GetHeader() map[string][]string {
+// Header mocks base method.
+func (m *MockMsg) Header() map[string][]string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHeader")
+	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(map[string][]string)
 	return ret0
 }
 
-// GetHeader indicates an expected call of GetHeader.
-func (mr *MockMsgMockRecorder) GetHeader() *gomock.Call {
+// Header indicates an expected call of Header.
+func (mr *MockMsgMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeader", reflect.TypeOf((*MockMsg)(nil).GetHeader))
-}
-
-// GetSubject mocks base method.
-func (m *MockMsg) GetSubject() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSubject")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetSubject indicates an expected call of GetSubject.
-func (mr *MockMsgMockRecorder) GetSubject() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubject", reflect.TypeOf((*MockMsg)(nil).GetSubject))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockMsg)(nil).Header))
 }
 
 // IsReply mocks base method.
@@ -139,7 +125,7 @@ func (mr *MockMsgMockRecorder) Respond(arg0 any) *gomock.Call {
 }
 
 // RespondMsg mocks base method.
-func (m *MockMsg) RespondMsg(arg0 interfaces.Msg) error {
+func (m *MockMsg) RespondMsg(arg0 mq.Msg) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -162,4 +148,18 @@ func (m *MockMsg) SetHeader(key, value string) {
 func (mr *MockMsgMockRecorder) SetHeader(key, value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockMsg)(nil).SetHeader), key, value)
+}
+
+// Subject mocks base method.
+func (m *MockMsg) Subject() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Subject")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Subject indicates an expected call of Subject.
+func (mr *MockMsgMockRecorder) Subject() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subject", reflect.TypeOf((*MockMsg)(nil).Subject))
 }

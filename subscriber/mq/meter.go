@@ -1,5 +1,5 @@
 //go:generate mockgen -package mock -source=meter.go -destination=mock/meter.go
-package interfaces
+package mq
 
 import "go.opentelemetry.io/otel/metric"
 

@@ -1,17 +1,17 @@
 //go:generate mockgen -package mock -source=msg.go -destination=mock/msg.go
-package interfaces
+package mq
 
 import "context"
 
 type Msg interface {
-	GetSubject() string
+	Subject() string
 	IsReply() bool
 	ReplyTo() string
 	Copy(subject string) Msg
 	SetHeader(key, value string)
 	Respond([]byte) error
-	GetHeader() map[string][]string
-	GetData() []byte
+	Header() map[string][]string
+	Data() []byte
 	RespondMsg(Msg) error
 }
 
