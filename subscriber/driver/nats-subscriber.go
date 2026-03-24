@@ -85,9 +85,17 @@ type NATSSubscription struct {
 }
 
 func (s *NATSSubscription) NextMsg(timeout time.Duration) (mq.Msg, error) {
+	if !s.Subscription.IsValid() {
+		return nil, fmt.Errorf("%w: subscription invalid", subscriber.ErrConnectionClosed)
+	}
+
 	msg, err := s.Subscription.NextMsg(timeout)
 	if err != nil {
-		if err == nats.ErrConnectionClosed || err == nats.ErrConnectionDraining {
+		switch err {
+		case nats.ErrConnectionClosed,
+			nats.ErrConnectionDraining,
+			nats.ErrBadSubscription,
+			nats.ErrSlowConsumer:
 			return nil, fmt.Errorf("%w: %w", subscriber.ErrConnectionClosed, err)
 		}
 

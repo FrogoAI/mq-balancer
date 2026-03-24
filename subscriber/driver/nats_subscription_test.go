@@ -2,6 +2,7 @@ package driver
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -44,4 +45,24 @@ func TestErrConnectionClosed_WrappingWorks(t *testing.T) {
 
 	testutils.Equal(t, errors.Is(wrapped, subscriber.ErrConnectionClosed), true)
 	testutils.Equal(t, errors.Is(wrapped, nats.ErrConnectionClosed), true)
+}
+
+func TestErrConnectionClosed_AllFatalErrors(t *testing.T) {
+	cases := []struct {
+		name    string
+		natsErr error
+	}{
+		{"ErrConnectionClosed", nats.ErrConnectionClosed},
+		{"ErrConnectionDraining", nats.ErrConnectionDraining},
+		{"ErrBadSubscription", nats.ErrBadSubscription},
+		{"ErrSlowConsumer", nats.ErrSlowConsumer},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			wrapped := fmt.Errorf("%w: %w", subscriber.ErrConnectionClosed, tc.natsErr)
+			testutils.Equal(t, errors.Is(wrapped, subscriber.ErrConnectionClosed), true)
+			testutils.Equal(t, errors.Is(wrapped, tc.natsErr), true)
+		})
+	}
 }

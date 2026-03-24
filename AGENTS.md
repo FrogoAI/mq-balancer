@@ -125,3 +125,6 @@ go vet ./...
 ### Coverage Target
 - **Total**: 90%+
 - **Excluded**: generated mocks (`/mock/`), protobuf, examples
+
+## Workflow Rules
+- **Always run tests and linter** after making changes: `go test -race -count=1 ./...` and `go vet ./...`

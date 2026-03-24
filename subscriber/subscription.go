@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	maximumBufferSize = 1024
+	maximumBufferSize    = 1024
+	maxConsecutiveErrors = 100
 
 	poolSizeValidate = 100 * time.Millisecond
 	idleTimeout      = 30 * time.Second
@@ -63,6 +64,8 @@ func (s *Subscription) Process(
 	go func() {
 		defer close(ch)
 
+		consecutiveErrors := 0
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -82,6 +85,17 @@ func (s *Subscription) Process(
 						return
 					}
 
+					consecutiveErrors++
+					if consecutiveErrors >= maxConsecutiveErrors {
+						s.Client.Logger().Error("Too many consecutive errors, stopping reader",
+							"err", err,
+							"subject", s.subject,
+							"queue", s.queue,
+						)
+
+						return
+					}
+
 					s.Client.Logger().Debug("Error getting next message with timeout",
 						"err", err,
 						"subject", s.subject,
@@ -91,7 +105,15 @@ func (s *Subscription) Process(
 					continue
 				}
 
-				ch <- msg
+				consecutiveErrors = 0
+
+				select {
+				case ch <- msg:
+				case <-ctx.Done():
+					return
+				case <-s.ctx.Done():
+					return
+				}
 			}
 		}
 	}()
@@ -126,7 +148,12 @@ func (s *Subscription) Process(
 		})
 	}
 
-	return s.wpool.Wait()
+	err = s.wpool.Wait()
+
+	// Ensure reader goroutine stops when worker pool exits
+	s.cancel()
+
+	return err
 }
 
 func (s *Subscription) Sub() mq.Subscription {
