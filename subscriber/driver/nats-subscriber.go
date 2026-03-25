@@ -22,11 +22,11 @@ func (m *NATSMsg) Subject() string {
 }
 
 func (m *NATSMsg) IsReply() bool {
-	return m.Msg.Reply != ""
+	return m.Reply != ""
 }
 
 func (m *NATSMsg) ReplyTo() string {
-	return m.Msg.Reply
+	return m.Reply
 }
 
 func (m *NATSMsg) Copy(subject string) mq.Msg {
@@ -45,7 +45,7 @@ func (m *NATSMsg) Copy(subject string) mq.Msg {
 		Msg: &nats.Msg{
 			Data:    data,
 			Header:  hdr,
-			Reply:   m.Msg.Reply,
+			Reply:   m.Reply,
 			Subject: subject,
 		},
 	}
@@ -85,7 +85,7 @@ type NATSSubscription struct {
 }
 
 func (s *NATSSubscription) NextMsg(timeout time.Duration) (mq.Msg, error) {
-	if !s.Subscription.IsValid() {
+	if !s.IsValid() {
 		return nil, fmt.Errorf("%w: subscription invalid", subscriber.ErrConnectionClosed)
 	}
 

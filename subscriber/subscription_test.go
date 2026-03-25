@@ -159,10 +159,7 @@ func TestProcess_ConsecutiveErrorsResetOnSuccess(t *testing.T) {
 
 	// Wait for at least 2 successful messages (proving counter resets)
 	deadline := time.After(5 * time.Second)
-	for {
-		if handled.Load() >= 2 {
-			break
-		}
+	for handled.Load() < 2 {
 		select {
 		case <-deadline:
 			t.Fatal("did not receive enough successful messages — counter may not be resetting")
