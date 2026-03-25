@@ -107,3 +107,20 @@ func TestNATSMsg_Copy_NilHeader(t *testing.T) {
 	copied := original.Copy("new.subject")
 	testutils.Equal(t, copied.Header() == nil, true)
 }
+
+func TestNATSMsg_Respond_NoConnection(t *testing.T) {
+	msg := &NATSMsg{Msg: &nats.Msg{}}
+	err := msg.Respond([]byte("data"))
+	testutils.Equal(t, err != nil, true)
+}
+
+func TestNATSMsg_RespondMsg_NoConnection(t *testing.T) {
+	msg := &NATSMsg{Msg: &nats.Msg{}}
+	reply := &NATSMsg{Msg: &nats.Msg{
+		Data:    []byte("reply"),
+		Subject: "reply.subject",
+		Reply:   "_INBOX.1",
+	}}
+	err := msg.RespondMsg(reply)
+	testutils.Equal(t, err != nil, true)
+}

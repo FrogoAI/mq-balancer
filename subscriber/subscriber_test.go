@@ -61,6 +61,39 @@ func TestNewSubscriber(t *testing.T) {
 	testutils.Equal(t, len(s.Subs().GetMap()), 0)
 }
 
+func TestSubscribe(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+	cfg := mock.NewMockConfig(ctrl)
+	sub := mock.NewMockSubscription(ctrl)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cl.EXPECT().Context().Return(ctx).AnyTimes()
+	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(sub, nil)
+	cl.EXPECT().Meter().Return(nil)
+	cl.EXPECT().Config().Return(cfg).AnyTimes()
+	cl.EXPECT().Logger().Return(stubLogger{}).AnyTimes()
+	cfg.EXPECT().ConcurrentSize().Return(2)
+	cfg.EXPECT().ReadTimeout().Return(50 * time.Millisecond)
+	cfg.EXPECT().MaxConcurrentSize().Return(uint64(10)).AnyTimes()
+	sub.EXPECT().NextMsg(gomock.Any()).Return(nil, errors.New("timeout")).AnyTimes()
+	sub.EXPECT().Drain().Return(nil).AnyTimes()
+
+	s := NewSubscriber(cl)
+	s.Subscribe("subj", "q", func(_ context.Context, _ mq.Msg) error {
+		return nil
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	err := s.Close()
+	testutils.Equal(t, err, nil)
+
+	s.ForceClose()
+}
+
 func TestSubscribeWithParameters_NilHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	cl := mock.NewMockClient(ctrl)

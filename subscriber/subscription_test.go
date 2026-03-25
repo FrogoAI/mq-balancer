@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+
 	"github.com/FrogoAI/mq-balancer/subscriber/mq"
 	"github.com/FrogoAI/mq-balancer/subscriber/mq/mock"
 	"github.com/FrogoAI/testutils"
@@ -221,6 +223,72 @@ func TestProcess_NonBlockingSendExitsOnCancel(t *testing.T) {
 		// Process exited — reader was not stuck on ch <- msg
 	case <-time.After(5 * time.Second):
 		t.Fatal("Process did not exit — reader likely blocked on ch <- msg")
+	}
+}
+
+func TestProcess_SetupMetricsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+	sub := mock.NewMockSubscription(ctrl)
+
+	cl.EXPECT().Context().Return(context.Background()).AnyTimes()
+	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(sub, nil)
+
+	// Return a failing meter so setupMetrics returns an error
+	provider := sdkmetric.NewMeterProvider()
+	realMeter := provider.Meter("test")
+	fm := &failingMeter{Meter: realMeter, failAt: 1}
+	cl.EXPECT().Meter().Return(fm)
+
+	s, err := NewSubscription(cl, "subj", "q")
+	testutils.Equal(t, err, nil)
+
+	err = s.Process(context.Background(), 1, 50*time.Millisecond, func(_ context.Context, _ mq.Msg) error {
+		return nil
+	})
+	testutils.Equal(t, err != nil, true)
+}
+
+func TestProcess_StopDuringProcess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	cl := mock.NewMockClient(ctrl)
+	cfg := mock.NewMockConfig(ctrl)
+	sub := mock.NewMockSubscription(ctrl)
+
+	cl.EXPECT().Context().Return(context.Background()).AnyTimes()
+	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(sub, nil)
+	cl.EXPECT().Meter().Return(nil)
+	cl.EXPECT().Config().Return(cfg).AnyTimes()
+	cl.EXPECT().Logger().Return(stubLogger{}).AnyTimes()
+	cfg.EXPECT().MaxConcurrentSize().Return(uint64(10)).AnyTimes()
+
+	// Slow down NextMsg to avoid hitting maxConsecutiveErrors before Stop
+	sub.EXPECT().NextMsg(gomock.Any()).DoAndReturn(func(_ time.Duration) (mq.Msg, error) {
+		time.Sleep(10 * time.Millisecond)
+		return nil, errors.New("timeout")
+	}).AnyTimes()
+	sub.EXPECT().Drain().Return(nil).AnyTimes()
+
+	s, err := NewSubscription(cl, "subj", "q")
+	testutils.Equal(t, err, nil)
+
+	done := make(chan error, 1)
+	go func() {
+		// Use context.Background() so only s.ctx cancellation (via Stop) exits the reader
+		done <- s.Process(context.Background(), 1, 50*time.Millisecond, func(_ context.Context, _ mq.Msg) error {
+			return nil
+		})
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+
+	err = s.Stop()
+	testutils.Equal(t, err, nil)
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Process did not exit after Stop")
 	}
 }
 

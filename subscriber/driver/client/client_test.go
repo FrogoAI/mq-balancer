@@ -42,6 +42,11 @@ func TestClient_Config(t *testing.T) {
 	testutils.Equal(t, c.Config().Addr, "nats://test:4222")
 }
 
+func TestClient_Conn(t *testing.T) {
+	c := &Client{}
+	testutils.Equal(t, c.Conn() == nil, true)
+}
+
 func TestClient_MeterConcurrency(t *testing.T) {
 	c := &Client{}
 
