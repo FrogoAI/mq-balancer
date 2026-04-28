@@ -14,7 +14,6 @@ import (
 	reflect "reflect"
 
 	mq "github.com/FrogoAI/mq-balancer/subscriber/mq"
-	metric "go.opentelemetry.io/otel/metric"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -99,10 +98,10 @@ func (mr *MockClientMockRecorder) Logger() *gomock.Call {
 }
 
 // Meter mocks base method.
-func (m *MockClient) Meter() metric.Meter {
+func (m *MockClient) Meter() mq.Metrics {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Meter")
-	ret0, _ := ret[0].(metric.Meter)
+	ret0, _ := ret[0].(mq.Metrics)
 	return ret0
 }
 
@@ -128,7 +127,7 @@ func (mr *MockClientMockRecorder) QueueSubscribeSync(subject, queue any) *gomock
 }
 
 // WithMeter mocks base method.
-func (m *MockClient) WithMeter(arg0 metric.Meter) {
+func (m *MockClient) WithMeter(arg0 mq.Metrics) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "WithMeter", arg0)
 }

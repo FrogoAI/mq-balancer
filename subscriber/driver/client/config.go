@@ -26,8 +26,8 @@ type Config struct {
 	MaxReconnects        int           `env:"_MAX_RECONNECTS" envDefault:"-1"`
 	ReconnectWait        time.Duration `env:"_RECONNECT_WAIT" envDefault:"1s"`
 	RetryOnFailedConnect bool          `env:"_RETRY_ON_FAILED_CONNECT" envDefault:"true"`
-	ConcurrentSizeVal    int           `env:"_CONCURRENT_SIZE" envDefault:"20"`
-	MaxConcurrentSize    uint64        `env:"_MAX_CONCURRENT_SIZE" envDefault:"100"`
+	ConcurrentSizeVal    int           `env:"_CONCURRENT_SIZE" envDefault:"2"`
+	MaxConcurrentSize    uint64        `env:"_MAX_CONCURRENT_SIZE" envDefault:"20"`
 	ReadTimeoutVal       time.Duration `env:"_READ_TIMEOUT" envDefault:"30s"`
 }
 

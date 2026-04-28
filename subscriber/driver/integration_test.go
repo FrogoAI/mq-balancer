@@ -12,13 +12,26 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 
 	"github.com/FrogoAI/mq-balancer/subscriber"
 	"github.com/FrogoAI/mq-balancer/subscriber/driver/client"
 	"github.com/FrogoAI/mq-balancer/subscriber/mq"
 	"github.com/FrogoAI/testutils"
 )
+
+type testMetrics struct{}
+
+func (testMetrics) Count(string, int64, []string) error {
+	return nil
+}
+
+func (testMetrics) Gauge(string, float64, []string) error {
+	return nil
+}
+
+func (testMetrics) Distribution(string, float64, []string) error {
+	return nil
+}
 
 func TestIntegration_SubscribeAndPublish(t *testing.T) {
 	srv := startTestServer(t)
@@ -278,10 +291,7 @@ func TestIntegration_WithMeter(t *testing.T) {
 	conn := connectClient(t, srv)
 	natsSubscriber := NewNATSSubscriber(conn)
 
-	provider := sdkmetric.NewMeterProvider()
-	meter := provider.Meter("test")
-
-	natsSubscriber.WithMeter(meter)
+	natsSubscriber.WithMeter(testMetrics{})
 	testutils.Equal(t, natsSubscriber.Meter() != nil, true)
 
 	s := subscriber.NewSubscriber(natsSubscriber)

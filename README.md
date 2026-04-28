@@ -12,7 +12,7 @@ It is built with **dynamic scaling** in mind: workers are spawned on-demand to h
 * **Dynamic Burst Scaling:** Automatically monitors queue depth and spawns "Temporal Workers" to handle pressure, scaling up to a configurable maximum and down to a minimum buffer.
 * **Resilient Worker Pools:** Isolates panic/crash failures and handles graceful shutdowns via context propagation.
 * **Middleware Support:** Includes built-in middleware like `WithResponseOnError` for RPC-style error reporting.
-* **Observability:** Built-in OpenTelemetry metrics for queue depth (`pending`), throughput (`delivered`), and dropped messages.
+* **Observability:** Backend-agnostic metrics hook for queue depth (`pending`), throughput (`delivered`), and dropped messages.
 
 ## Installation
 
@@ -124,9 +124,20 @@ type Config interface {
 
 ## Metrics
 
-The library uses `go.opentelemetry.io/otel/metric`. Available metrics include:
+The library accepts any meter that implements the small `mq.Metrics` interface:
+
+```go
+type Metrics interface {
+	Count(name string, value int64, tags []string) error
+	Gauge(name string, value float64, tags []string) error
+	Distribution(name string, value float64, tags []string) error
+}
+```
+
+Available metrics include:
 
 * `queue.subscriptions.pending.msgs`: Current channel buffer depth.
+* `queue.subscriptions.pending.bytes`: Current pending message bytes.
 * `queue.subscriptions.dropped.count`: Messages dropped if buffer is full.
 * `queue.subscriptions.send.count`: Successfully processed messages.
 

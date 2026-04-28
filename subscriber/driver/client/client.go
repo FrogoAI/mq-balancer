@@ -6,7 +6,8 @@ import (
 	"sync"
 
 	"github.com/nats-io/nats.go"
-	"go.opentelemetry.io/otel/metric"
+
+	"github.com/FrogoAI/mq-balancer/subscriber/mq"
 )
 
 type Client struct {
@@ -16,7 +17,7 @@ type Client struct {
 	logger Logger
 
 	mu    sync.RWMutex
-	meter metric.Meter
+	meter mq.Metrics
 }
 
 func NewClient(
@@ -37,14 +38,14 @@ func NewClient(
 	}, nil
 }
 
-func (c *Client) WithMeter(m metric.Meter) {
+func (c *Client) WithMeter(m mq.Metrics) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.meter = m
 }
 
-func (c *Client) Meter() metric.Meter {
+func (c *Client) Meter() mq.Metrics {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 

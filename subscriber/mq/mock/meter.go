@@ -12,9 +12,75 @@ package mock
 import (
 	reflect "reflect"
 
-	metric "go.opentelemetry.io/otel/metric"
+	mq "github.com/FrogoAI/mq-balancer/subscriber/mq"
 	gomock "go.uber.org/mock/gomock"
 )
+
+// MockMetrics is a mock of Metrics interface.
+type MockMetrics struct {
+	ctrl     *gomock.Controller
+	recorder *MockMetricsMockRecorder
+	isgomock struct{}
+}
+
+// MockMetricsMockRecorder is the mock recorder for MockMetrics.
+type MockMetricsMockRecorder struct {
+	mock *MockMetrics
+}
+
+// NewMockMetrics creates a new mock instance.
+func NewMockMetrics(ctrl *gomock.Controller) *MockMetrics {
+	mock := &MockMetrics{ctrl: ctrl}
+	mock.recorder = &MockMetricsMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMetrics) EXPECT() *MockMetricsMockRecorder {
+	return m.recorder
+}
+
+// Count mocks base method.
+func (m *MockMetrics) Count(name string, value int64, tags []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Count", name, value, tags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Count indicates an expected call of Count.
+func (mr *MockMetricsMockRecorder) Count(name, value, tags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockMetrics)(nil).Count), name, value, tags)
+}
+
+// Distribution mocks base method.
+func (m *MockMetrics) Distribution(name string, value float64, tags []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Distribution", name, value, tags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Distribution indicates an expected call of Distribution.
+func (mr *MockMetricsMockRecorder) Distribution(name, value, tags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Distribution", reflect.TypeOf((*MockMetrics)(nil).Distribution), name, value, tags)
+}
+
+// Gauge mocks base method.
+func (m *MockMetrics) Gauge(name string, value float64, tags []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Gauge", name, value, tags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Gauge indicates an expected call of Gauge.
+func (mr *MockMetricsMockRecorder) Gauge(name, value, tags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Gauge", reflect.TypeOf((*MockMetrics)(nil).Gauge), name, value, tags)
+}
 
 // MockMeter is a mock of Meter interface.
 type MockMeter struct {
@@ -41,10 +107,10 @@ func (m *MockMeter) EXPECT() *MockMeterMockRecorder {
 }
 
 // Meter mocks base method.
-func (m *MockMeter) Meter() metric.Meter {
+func (m *MockMeter) Meter() mq.Metrics {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Meter")
-	ret0, _ := ret[0].(metric.Meter)
+	ret0, _ := ret[0].(mq.Metrics)
 	return ret0
 }
 
@@ -55,7 +121,7 @@ func (mr *MockMeterMockRecorder) Meter() *gomock.Call {
 }
 
 // WithMeter mocks base method.
-func (m *MockMeter) WithMeter(arg0 metric.Meter) {
+func (m *MockMeter) WithMeter(arg0 mq.Metrics) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "WithMeter", arg0)
 }

@@ -1,9 +1,13 @@
 //go:generate mockgen -package mock -source=meter.go -destination=mock/meter.go
 package mq
 
-import "go.opentelemetry.io/otel/metric"
+type Metrics interface {
+	Count(name string, value int64, tags []string) error
+	Gauge(name string, value float64, tags []string) error
+	Distribution(name string, value float64, tags []string) error
+}
 
 type Meter interface {
-	Meter() metric.Meter
-	WithMeter(metric.Meter)
+	Meter() Metrics
+	WithMeter(Metrics)
 }

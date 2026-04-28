@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"go.opentelemetry.io/otel/metric"
 
 	"github.com/FrogoAI/mq-balancer/subscriber"
 	"github.com/FrogoAI/mq-balancer/subscriber/driver/client"
@@ -151,11 +150,11 @@ func NewNATSSubscriber(conn *client.Client) *NATSSubscriber {
 	return &NATSSubscriber{Conn: conn}
 }
 
-func (n *NATSSubscriber) WithMeter(m metric.Meter) {
+func (n *NATSSubscriber) WithMeter(m mq.Metrics) {
 	n.Conn.WithMeter(m)
 }
 
-func (n *NATSSubscriber) Meter() metric.Meter {
+func (n *NATSSubscriber) Meter() mq.Metrics {
 	return n.Conn.Meter()
 }
 

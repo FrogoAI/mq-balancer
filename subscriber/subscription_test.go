@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-
 	"github.com/FrogoAI/mq-balancer/subscriber/mq"
 	"github.com/FrogoAI/mq-balancer/subscriber/mq/mock"
 	"github.com/FrogoAI/testutils"
@@ -226,19 +224,25 @@ func TestProcess_NonBlockingSendExitsOnCancel(t *testing.T) {
 	}
 }
 
-func TestProcess_SetupMetricsError(t *testing.T) {
+func TestProcess_MetricsErrorDoesNotStopProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	cl := mock.NewMockClient(ctrl)
+	cfg := mock.NewMockConfig(ctrl)
 	sub := mock.NewMockSubscription(ctrl)
 
 	cl.EXPECT().Context().Return(context.Background()).AnyTimes()
 	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(sub, nil)
+	cl.EXPECT().Meter().Return(&recordingMetrics{err: errors.New("record failed")})
+	cl.EXPECT().Config().Return(cfg).AnyTimes()
+	cl.EXPECT().Logger().Return(stubLogger{}).AnyTimes()
+	cfg.EXPECT().MaxConcurrentSize().Return(uint64(10)).AnyTimes()
 
-	// Return a failing meter so setupMetrics returns an error
-	provider := sdkmetric.NewMeterProvider()
-	realMeter := provider.Meter("test")
-	fm := &failingMeter{Meter: realMeter, failAt: 1}
-	cl.EXPECT().Meter().Return(fm)
+	sub.EXPECT().Pending().Return(int64(5), int64(100), nil)
+	sub.EXPECT().Dropped().Return(int64(1), nil)
+	sub.EXPECT().Delivered().Return(int64(50), nil)
+	sub.EXPECT().Subject().Return("test.subject")
+	sub.EXPECT().NextMsg(gomock.Any()).Return(nil,
+		fmt.Errorf("%w: nats: connection closed", ErrConnectionClosed)).AnyTimes()
 
 	s, err := NewSubscription(cl, "subj", "q")
 	testutils.Equal(t, err, nil)
@@ -246,7 +250,7 @@ func TestProcess_SetupMetricsError(t *testing.T) {
 	err = s.Process(context.Background(), 1, 50*time.Millisecond, func(_ context.Context, _ mq.Msg) error {
 		return nil
 	})
-	testutils.Equal(t, err != nil, true)
+	testutils.Equal(t, err, nil)
 }
 
 func TestProcess_StopDuringProcess(t *testing.T) {

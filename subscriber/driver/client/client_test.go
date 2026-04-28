@@ -6,10 +6,23 @@ import (
 	"testing"
 
 	"github.com/nats-io/nats.go"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 
 	"github.com/FrogoAI/testutils"
 )
+
+type testMetrics struct{}
+
+func (testMetrics) Count(string, int64, []string) error {
+	return nil
+}
+
+func (testMetrics) Gauge(string, float64, []string) error {
+	return nil
+}
+
+func (testMetrics) Distribution(string, float64, []string) error {
+	return nil
+}
 
 func TestClient_Logger_Nil(t *testing.T) {
 	c := &Client{}
@@ -58,10 +71,7 @@ func TestClient_MeterConcurrency(t *testing.T) {
 func TestClient_WithMeter(t *testing.T) {
 	c := &Client{}
 
-	provider := sdkmetric.NewMeterProvider()
-	m := provider.Meter("test")
-
-	c.WithMeter(m)
+	c.WithMeter(testMetrics{})
 	testutils.Equal(t, c.Meter() != nil, true)
 }
 
