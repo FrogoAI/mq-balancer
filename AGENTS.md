@@ -48,7 +48,8 @@ mq          →  (no internal deps, only otel/metric)
 
 - **Interfaces in `mq/` package**: defines `Client`, `Msg`, `Subscription`, `Config`, `Logger`, `Meter`. The driver implements them; the subscriber consumes them.
 - **Worker pool auto-scaling**: persistent workers + temporal workers that spin up under load and idle-timeout after 30s.
-- **Error wrapping at the driver boundary**: NATS-specific errors are wrapped with `subscriber.ErrConnectionClosed` in `NATSSubscription.NextMsg()`, so the subscriber package never imports NATS directly.
+- **Error wrapping at the driver boundary**: NATS-specific errors are classified onto subscriber sentinels in `classifyNextMsgErr()` / `classifySubscribeErr()`, so the subscriber package never imports NATS directly. The classification decides reader behaviour, so it must stay exact — in particular `nats.ErrTimeout` is an *idle poll*, not a failure, and `nats.ErrSlowConsumer` leaves the subscription valid.
+- **The reader never gives up on a transient fault**: returning from `readLoop` closes the message channel, which retires the worker pool and takes the subscription down silently. Unknown errors back off exponentially; an unreadable subscription is re-established by `resubscribe()`. Only a permanently closed connection ends the loop, and it surfaces as `ErrSubscriptionFailed` from `Process`.
 - **Deep copy on `Msg.Copy()`**: header map and data slice are fully copied to prevent mutation of the original.
 
 ## Package Responsibilities
@@ -59,7 +60,7 @@ mq          →  (no internal deps, only otel/metric)
 | `subscriber/subscription.go` | `Subscription` type: reader goroutine, auto-scaler, worker pool |
 | `subscriber/meter.go` | OTel observable gauges for pending/dropped/delivered counts |
 | `subscriber/response.go` | `WithResponseOnError` middleware: sends error headers on reply |
-| `subscriber/errors.go` | Sentinel errors (`ErrConnectionClosed`) |
+| `subscriber/errors.go` | Sentinel errors (`ErrConnectionClosed`, `ErrDraining`, `ErrTimeout`, `ErrSlowConsumer`, `ErrMaxMessages`, `ErrSubscriptionFailed`) |
 | `subscriber/mq/*.go` | All interface definitions |
 | `subscriber/driver/nats-subscriber.go` | NATS adapter types: `NATSMsg`, `NATSSubscription`, `NATSSubscriber`, `NATSConfig` |
 | `subscriber/driver/client/client.go` | NATS connection wrapper with meter mutex |

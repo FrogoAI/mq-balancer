@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -90,18 +91,41 @@ func (s *NATSSubscription) NextMsg(timeout time.Duration) (mq.Msg, error) {
 
 	msg, err := s.Subscription.NextMsg(timeout)
 	if err != nil {
-		switch err {
-		case nats.ErrConnectionClosed,
-			nats.ErrConnectionDraining,
-			nats.ErrBadSubscription,
-			nats.ErrSlowConsumer:
-			return nil, fmt.Errorf("%w: %w", subscriber.ErrConnectionClosed, err)
-		}
-
-		return nil, err
+		return nil, classifyNextMsgErr(err)
 	}
 
 	return &NATSMsg{Msg: msg}, nil
+}
+
+// classifyNextMsgErr maps a NATS read error onto a subscriber sentinel so the
+// subscriber package can decide how to react without importing nats.
+//
+// The distinction that matters most is ErrTimeout: NextMsg returns it whenever
+// no message arrived within the poll window, which is the normal idle path and
+// must never be treated as a failure. ErrSlowConsumer is likewise recoverable —
+// nats clears the flag as it is read and the subscription stays valid.
+func classifyNextMsgErr(err error) error {
+	switch {
+	case errors.Is(err, nats.ErrTimeout), errors.Is(err, context.DeadlineExceeded):
+		return fmt.Errorf("%w: %w", subscriber.ErrTimeout, err)
+
+	case errors.Is(err, nats.ErrSlowConsumer):
+		return fmt.Errorf("%w: %w", subscriber.ErrSlowConsumer, err)
+
+	case errors.Is(err, nats.ErrMaxMessages):
+		return fmt.Errorf("%w: %w", subscriber.ErrMaxMessages, err)
+
+	case errors.Is(err, nats.ErrConnectionDraining):
+		return fmt.Errorf("%w: %w", subscriber.ErrDraining, err)
+
+	case errors.Is(err, nats.ErrConnectionClosed),
+		errors.Is(err, nats.ErrBadSubscription),
+		errors.Is(err, nats.ErrSyncSubRequired),
+		errors.Is(err, nats.ErrInvalidConnection):
+		return fmt.Errorf("%w: %w", subscriber.ErrConnectionClosed, err)
+	}
+
+	return err
 }
 
 func (s *NATSSubscription) Drain() error {
@@ -179,8 +203,19 @@ func (n *NATSSubscriber) Close() error {
 func (n *NATSSubscriber) QueueSubscribeSync(subject, queue string) (mq.Subscription, error) {
 	sub, err := n.Conn.QueueSubscribeSync(subject, queue)
 	if err != nil {
-		return nil, err
+		return nil, classifySubscribeErr(err)
 	}
 
 	return &NATSSubscription{Subscription: sub}, nil
+}
+
+// classifySubscribeErr marks the failures no retry can recover from. A closed
+// or invalid connection can never be subscribed to again; everything else is
+// transient and worth retrying.
+func classifySubscribeErr(err error) error {
+	if errors.Is(err, nats.ErrConnectionClosed) || errors.Is(err, nats.ErrInvalidConnection) {
+		return fmt.Errorf("%w: %w", subscriber.ErrConnectionClosed, err)
+	}
+
+	return err
 }

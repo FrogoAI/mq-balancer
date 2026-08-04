@@ -337,6 +337,67 @@ func TestIntegration_NATSSubscriber_Close(t *testing.T) {
 	testutils.Equal(t, err, nil)
 }
 
+// TestIntegration_IdleSubscriptionSurvives reproduces the production failure
+// end-to-end: a subject with no traffic returns a read timeout on every poll,
+// and those timeouts used to accumulate until the reader retired itself after
+// 100 of them, silently and with a nil error.
+//
+// A 5ms read timeout burns through that budget in half a second, so idling for
+// well over a second puts this comfortably past the old threshold before a
+// single message is published.
+func TestIntegration_IdleSubscriptionSurvives(t *testing.T) {
+	srv := startTestServer(t)
+	defer srv.Shutdown()
+
+	conn := connectClient(t, srv)
+
+	s := subscriber.NewSubscriber(NewNATSSubscriber(conn))
+
+	const (
+		subject   = "test.idle"
+		queue     = "grp"
+		idlePolls = 5 * time.Millisecond
+		idleFor   = 1500 * time.Millisecond
+	)
+
+	received := make(chan string, 1)
+
+	s.SubscribeWithParameters(1, idlePolls, subject, queue, func(_ context.Context, msg mq.Msg) error {
+		received <- string(msg.Data())
+
+		return nil
+	})
+
+	// Give the subscription time to register, then leave it completely idle for
+	// roughly 300 poll windows.
+	time.Sleep(50 * time.Millisecond)
+
+	sub := s.Get(subject, queue)
+	testutils.Equal(t, sub != nil, true)
+
+	time.Sleep(idleFor)
+
+	testutils.Equal(t, sub.Alive(), true)
+
+	err := conn.Conn().Publish(subject, []byte("still here"))
+	testutils.Equal(t, err, nil)
+	err = conn.Conn().Flush()
+	testutils.Equal(t, err, nil)
+
+	select {
+	case data := <-received:
+		testutils.Equal(t, data, "still here")
+	case <-time.After(2 * time.Second):
+		t.Fatal("idle subscription stopped delivering messages")
+	}
+
+	err = s.Close()
+	testutils.Equal(t, err, nil)
+
+	err = s.Wait()
+	testutils.Equal(t, err, nil)
+}
+
 func connectClient(t *testing.T, srv interface{ ClientURL() string }) *client.Client {
 	t.Helper()
 

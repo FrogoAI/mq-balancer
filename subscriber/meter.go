@@ -13,6 +13,16 @@ const (
 	SubscriptionsDroppedMsgs  = "queue.subscriptions.dropped.count"
 	SubscriptionCountMsgs     = "queue.subscriptions.send.count"
 
+	// SubscriptionReaderErrors counts read failures, tagged by reason. Idle
+	// poll timeouts are deliberately excluded: they are not failures.
+	SubscriptionReaderErrors = "queue.subscriptions.reader.errors"
+	// SubscriptionResubscribes counts successful subscription recoveries.
+	SubscriptionResubscribes = "queue.subscriptions.resubscribe.count"
+
+	reasonSlowConsumer     = "slow_consumer"
+	reasonConnectionClosed = "connection_closed"
+	reasonUnknown          = "unknown"
+
 	subscriptionMetricsInterval = 15 * time.Second
 )
 
@@ -79,8 +89,27 @@ func (s *Subscription) recordSubscriptionMetricsUntilDone(meter mq.Metrics) {
 }
 
 func (s *Subscription) recordSubscriptionMetrics(meter mq.Metrics) {
-	if err := recordSubscriptionMetrics(meter, s.sub); err != nil {
+	if err := recordSubscriptionMetrics(meter, s.Sub()); err != nil {
 		s.Client.Logger().Debug("Record subscription metrics failed", "err", err, "subject", s.subject, "queue", s.queue)
+	}
+}
+
+func (s *Subscription) countReaderError(reason string) {
+	s.count(SubscriptionReaderErrors, []string{"subject:" + s.subject, "reason:" + reason})
+}
+
+func (s *Subscription) countResubscribe() {
+	s.count(SubscriptionResubscribes, []string{"subject:" + s.subject})
+}
+
+func (s *Subscription) count(name string, tags []string) {
+	meter := s.Meter()
+	if meter == nil {
+		return
+	}
+
+	if err := meter.Count(name, 1, tags); err != nil {
+		s.Client.Logger().Debug("Record counter failed", "err", err, "metric", name, "subject", s.subject)
 	}
 }
 

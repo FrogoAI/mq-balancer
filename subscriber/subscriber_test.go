@@ -71,7 +71,7 @@ func TestSubscribe(t *testing.T) {
 
 	cl.EXPECT().Context().Return(ctx).AnyTimes()
 	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(sub, nil)
-	cl.EXPECT().Meter().Return(nil)
+	cl.EXPECT().Meter().Return(nil).AnyTimes()
 	cl.EXPECT().Config().Return(cfg).AnyTimes()
 	cl.EXPECT().Logger().Return(stubLogger{}).AnyTimes()
 	cfg.EXPECT().ConcurrentSize().Return(2)
@@ -142,7 +142,7 @@ func TestSubscribeWithParameters_ZeroBuffer(t *testing.T) {
 
 	cl.EXPECT().Context().Return(ctx).AnyTimes()
 	cl.EXPECT().QueueSubscribeSync("subj", "q").Return(subMock, nil)
-	cl.EXPECT().Meter().Return(nil)
+	cl.EXPECT().Meter().Return(nil).AnyTimes()
 	cl.EXPECT().Config().Return(cfg).AnyTimes()
 	cl.EXPECT().Logger().Return(stubLogger{}).AnyTimes()
 	cfg.EXPECT().MaxConcurrentSize().Return(uint64(10)).AnyTimes()

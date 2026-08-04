@@ -1,8 +1,8 @@
 package driver
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -83,22 +83,127 @@ func TestNATSSubscription_Delivered_InvalidSubscription(t *testing.T) {
 	testutils.Equal(t, err != nil, true)
 }
 
-func TestErrConnectionClosed_AllFatalErrors(t *testing.T) {
+// TestClassifyNextMsgErr pins the mapping the reader loop depends on. Getting
+// ErrTimeout wrong here is what silently killed idle subscriptions: it is the
+// normal quiet path, not a fault, and must not be classified as one.
+func TestClassifyNextMsgErr(t *testing.T) {
 	cases := []struct {
-		name    string
-		natsErr error
+		name      string
+		natsErr   error
+		want      error
+		unwrapped bool
 	}{
-		{"ErrConnectionClosed", nats.ErrConnectionClosed},
-		{"ErrConnectionDraining", nats.ErrConnectionDraining},
-		{"ErrBadSubscription", nats.ErrBadSubscription},
-		{"ErrSlowConsumer", nats.ErrSlowConsumer},
+		{
+			name:    "timeout is its own sentinel, not a failure",
+			natsErr: nats.ErrTimeout,
+			want:    subscriber.ErrTimeout,
+		},
+		{
+			name:    "deadline exceeded is a timeout",
+			natsErr: context.DeadlineExceeded,
+			want:    subscriber.ErrTimeout,
+		},
+		{
+			name:    "slow consumer is recoverable, not a closed connection",
+			natsErr: nats.ErrSlowConsumer,
+			want:    subscriber.ErrSlowConsumer,
+		},
+		{
+			name:    "max messages is terminal but legitimate",
+			natsErr: nats.ErrMaxMessages,
+			want:    subscriber.ErrMaxMessages,
+		},
+		{
+			name:    "draining is a clean shutdown",
+			natsErr: nats.ErrConnectionDraining,
+			want:    subscriber.ErrDraining,
+		},
+		{
+			name:    "connection closed",
+			natsErr: nats.ErrConnectionClosed,
+			want:    subscriber.ErrConnectionClosed,
+		},
+		{
+			name:    "bad subscription",
+			natsErr: nats.ErrBadSubscription,
+			want:    subscriber.ErrConnectionClosed,
+		},
+		{
+			name:    "sync sub required",
+			natsErr: nats.ErrSyncSubRequired,
+			want:    subscriber.ErrConnectionClosed,
+		},
+		{
+			name:    "invalid connection",
+			natsErr: nats.ErrInvalidConnection,
+			want:    subscriber.ErrConnectionClosed,
+		},
+		{
+			name:      "unknown errors pass through untouched",
+			natsErr:   errors.New("something else"),
+			unwrapped: true,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapped := fmt.Errorf("%w: %w", subscriber.ErrConnectionClosed, tc.natsErr)
-			testutils.Equal(t, errors.Is(wrapped, subscriber.ErrConnectionClosed), true)
-			testutils.Equal(t, errors.Is(wrapped, tc.natsErr), true)
+			got := classifyNextMsgErr(tc.natsErr)
+
+			// The original error is always preserved for logging.
+			testutils.Equal(t, errors.Is(got, tc.natsErr), true)
+
+			if tc.unwrapped {
+				testutils.Equal(t, got, tc.natsErr)
+
+				return
+			}
+
+			testutils.Equal(t, errors.Is(got, tc.want), true)
+		})
+	}
+}
+
+// TestClassifyNextMsgErr_TimeoutIsNotConnectionClosed is called out separately
+// because conflating the two is the exact defect this mapping fixes.
+func TestClassifyNextMsgErr_TimeoutIsNotConnectionClosed(t *testing.T) {
+	got := classifyNextMsgErr(nats.ErrTimeout)
+
+	testutils.Equal(t, errors.Is(got, subscriber.ErrConnectionClosed), false)
+	testutils.Equal(t, errors.Is(got, subscriber.ErrSlowConsumer), false)
+}
+
+func TestClassifySubscribeErr(t *testing.T) {
+	cases := []struct {
+		name    string
+		natsErr error
+		fatal   bool
+	}{
+		{
+			name:    "closed connection is unrecoverable",
+			natsErr: nats.ErrConnectionClosed,
+			fatal:   true,
+		},
+		{
+			name:    "invalid connection is unrecoverable",
+			natsErr: nats.ErrInvalidConnection,
+			fatal:   true,
+		},
+		{
+			name:    "no servers is transient and worth retrying",
+			natsErr: nats.ErrNoServers,
+		},
+		{
+			name:    "unknown errors are transient",
+			natsErr: errors.New("something else"),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := classifySubscribeErr(tc.natsErr)
+
+			testutils.Equal(t, errors.Is(got, tc.natsErr), true)
+			testutils.Equal(t, errors.Is(got, subscriber.ErrConnectionClosed), tc.fatal)
 		})
 	}
 }
